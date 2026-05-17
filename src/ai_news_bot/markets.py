@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import json
 import urllib.parse
 import urllib.request
@@ -33,7 +33,7 @@ MARKET_SYMBOLS = [
 
 def _chart_url(symbol: str) -> str:
     encoded = urllib.parse.quote(symbol, safe="")
-    return f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded}?range=1d&interval=5m"
+    return f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded}?range=5d&interval=1d"
 
 
 def _fetch_json(url: str) -> dict:
@@ -82,8 +82,7 @@ def _parse_quote(region: str, name: str, symbol: str, data: dict) -> MarketQuote
     )
 
 
-def fetch_market_quotes(lookback_hours: int = 24) -> list[MarketQuote]:
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+def fetch_market_quotes() -> list[MarketQuote]:
     quotes: list[MarketQuote] = []
     for region, name, symbol in MARKET_SYMBOLS:
         try:
@@ -91,6 +90,6 @@ def fetch_market_quotes(lookback_hours: int = 24) -> list[MarketQuote]:
             quote = _parse_quote(region, name, symbol, data)
         except Exception:
             quote = None
-        if quote and datetime.fromisoformat(quote.latest_time) >= cutoff:
+        if quote:
             quotes.append(quote)
     return quotes

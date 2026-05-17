@@ -6,7 +6,7 @@ Daily Feishu bot for important news, AI/autonomous driving industry news, and A/
 
 - Fetches important domestic/global news from the last 24 hours.
 - Fetches domestic/global AI and autonomous driving industry news from the last 24 hours.
-- Fetches A-share, Hong Kong, and US index market data only when the quote data is within the last 24 hours.
+- Fetches A-share, Hong Kong, and US index market data from the latest available trading day.
 - Uses DeepSeek or OpenAI to create a Chinese brief with summaries and impact notes.
 - Sends a Feishu interactive message card.
 - Supports local runs and GitHub Actions scheduled runs.
@@ -105,4 +105,4 @@ DEEPSEEK_MODEL
 
 ## Notes
 
-The current source layer uses RSS, Google News search feeds, and Yahoo Finance chart data. If markets are closed and the latest index data is older than 24 hours, the bot will not use stale quote data. The generated market section is general analysis, not personalized financial advice. For long-term stable use, extend it with internal feeds, a news API, RSSHub, exchange data providers, or paid media subscriptions.
+The current source layer uses RSS, Google News search feeds, and Yahoo Finance chart data. News is filtered to the last 24 hours; market quotes use the latest available trading day so weekends and holidays still include the last market session. The generated market section is general analysis, not personalized financial advice. For long-term stable use, extend it with internal feeds, a news API, RSSHub, exchange data providers, or paid media subscriptions.

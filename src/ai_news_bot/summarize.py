@@ -53,7 +53,8 @@ Create a Chinese Feishu daily brief from the candidate news and market data belo
 Hard constraints:
 - Use only information in the candidate news and market data.
 - All candidate news is already filtered to the last 24 hours. Do not introduce older news.
-- Market data is filtered to the last 24 hours. If market data is empty, explicitly say there is no usable 24-hour market quote data and do not use stale prices.
+- Market data uses the latest available trading day from the market data source, because stock markets may be closed during the last 24 hours.
+- If market data is empty, explicitly say there is no usable recent trading-day market quote data.
 - Do not invent facts, prices, policy details, earnings, or company events.
 - Output Chinese markdown only.
 - Keep the final answer under 4000 Chinese characters.
@@ -69,6 +70,9 @@ Required structure:
    - Cover Market News and any available A-share, Hong Kong, and US index data.
    - Explain likely market implications based only on the provided market news and index moves.
    - Provide cautious, general investment suggestions such as risk control, watchlist themes, position sizing, and what to monitor next.
+   - Add 3-5 specific A-share watchlist candidates with stock names and stock codes.
+   - For each A-share candidate, include: stock name, stock code, related theme, reason to watch, key risk, and what signal to monitor next.
+   - Only recommend candidates that can be reasonably connected to the provided news, market data, or AI/autonomous-driving themes.
    - Do not give personalized financial advice, guaranteed returns, or unconditional buy/sell instructions.
 4. Today's observations
    - Give 3-5 concise cross-market and industry takeaways.

@@ -21,7 +21,7 @@ def shanghai_now() -> datetime:
 def main() -> None:
     settings = load_settings()
     items = fetch_news(settings.news_lookback_hours, settings.max_news_items)
-    market_quotes = fetch_market_quotes(settings.news_lookback_hours)
+    market_quotes = fetch_market_quotes()
     brief = build_brief(
         settings.llm_provider,
         settings.llm_api_key,
