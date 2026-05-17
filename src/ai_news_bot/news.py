@@ -27,12 +27,15 @@ class FeedQuery:
 
 
 FEED_QUERIES = [
-    FeedQuery("Daily Domestic News", "__TOP_STORIES__", "zh-CN", "CN", "CN:zh-Hans"),
-    FeedQuery("Daily Domestic News", "China breaking news politics economy society", "zh-CN", "CN", "CN:zh-Hans"),
-    FeedQuery("Daily Domestic News", "China finance technology policy market news", "zh-CN", "CN", "CN:zh-Hans"),
-    FeedQuery("Daily Global News", "__TOP_STORIES__", "en-US", "US", "US:en"),
-    FeedQuery("Daily Global News", "world breaking news politics economy technology", "en-US", "US", "US:en"),
-    FeedQuery("Daily Global News", "global markets geopolitics business technology news", "en-US", "US", "US:en"),
+    FeedQuery("Important Domestic News", "__TOP_STORIES__", "zh-CN", "CN", "CN:zh-Hans"),
+    FeedQuery("Important Domestic News", "China breaking news politics economy society", "zh-CN", "CN", "CN:zh-Hans"),
+    FeedQuery("Important Domestic News", "China finance technology policy market news", "zh-CN", "CN", "CN:zh-Hans"),
+    FeedQuery("Important Global News", "__TOP_STORIES__", "en-US", "US", "US:en"),
+    FeedQuery("Important Global News", "world breaking news politics economy technology", "en-US", "US", "US:en"),
+    FeedQuery("Important Global News", "global markets geopolitics business technology news", "en-US", "US", "US:en"),
+    FeedQuery("Market News", "A-share Hong Kong US stocks market index investors", "zh-CN", "CN", "CN:zh-Hans"),
+    FeedQuery("Market News", "A股 港股 美股 行情 指数 投资者", "zh-CN", "CN", "CN:zh-Hans"),
+    FeedQuery("Market News", "US stocks Hong Kong stocks China A-shares market today", "en-US", "US", "US:en"),
     FeedQuery("Domestic AI", "China artificial intelligence large language model", "zh-CN", "CN", "CN:zh-Hans"),
     FeedQuery("Domestic AI", "China AI chip computing power policy funding", "zh-CN", "CN", "CN:zh-Hans"),
     FeedQuery("Domestic AI", "Baidu Alibaba Tencent ByteDance AI model", "zh-CN", "CN", "CN:zh-Hans"),
@@ -48,12 +51,10 @@ FEED_QUERIES = [
 ]
 
 
-STRICT_24H_SECTIONS = {"Daily Domestic News", "Daily Global News"}
-
-
 SECTION_ORDER = [
-    "Daily Domestic News",
-    "Daily Global News",
+    "Important Domestic News",
+    "Important Global News",
+    "Market News",
     "Domestic AI",
     "Global AI",
     "Domestic Autonomous Driving",
@@ -101,13 +102,13 @@ def _clean_text(value: str | None) -> str:
     return " ".join(html.unescape(value).split())
 
 
-def _entry_to_item(section: str, entry, published_dt: datetime | None) -> NewsItem:
+def _entry_to_item(section: str, entry, published_dt: datetime) -> NewsItem:
     return NewsItem(
         section=section,
         title=_clean_text(entry.get("title")),
         link=entry.get("link", ""),
         source=_clean_text(entry.get("source", {}).get("title", "Google News")),
-        published=published_dt.isoformat() if published_dt else "",
+        published=published_dt.isoformat(),
         summary=_clean_text(entry.get("summary")),
     )
 
@@ -117,7 +118,6 @@ def fetch_news(lookback_hours: int, max_items: int) -> list[NewsItem]:
     per_section = max(2, max_items // len(SECTION_ORDER))
     seen_links: set[str] = set()
     by_section: dict[str, list[NewsItem]] = {section: [] for section in SECTION_ORDER}
-    fallback_by_section: dict[str, list[NewsItem]] = {section: [] for section in SECTION_ORDER}
 
     for feed_query in FEED_QUERIES:
         feed = feedparser.parse(_google_news_rss(feed_query))
@@ -125,25 +125,14 @@ def fetch_news(lookback_hours: int, max_items: int) -> list[NewsItem]:
             link = entry.get("link", "")
             if not link or link in seen_links:
                 continue
-            seen_links.add(link)
             published_dt = _parse_time(entry)
-            item = _entry_to_item(feed_query.section, entry, published_dt)
-            fallback_by_section[feed_query.section].append(item)
             if not published_dt or published_dt < cutoff:
                 continue
-            by_section[feed_query.section].append(item)
+            seen_links.add(link)
+            by_section[feed_query.section].append(_entry_to_item(feed_query.section, entry, published_dt))
 
     items: list[NewsItem] = []
     for section in SECTION_ORDER:
-        selected = list(by_section[section])
-        if section not in STRICT_24H_SECTIONS:
-            selected_links = {item.link for item in selected}
-            for item in fallback_by_section[section]:
-                if len(selected) >= per_section:
-                    break
-                if item.link not in selected_links:
-                    selected.append(item)
-                    selected_links.add(item.link)
-        items.extend(selected[:per_section])
+        items.extend(by_section[section][:per_section])
 
     return items[:max_items]

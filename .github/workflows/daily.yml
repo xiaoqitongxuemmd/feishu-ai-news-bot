@@ -28,5 +28,5 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           NEWS_LOOKBACK_HOURS: "24"
-          MAX_NEWS_ITEMS: "24"
+          MAX_NEWS_ITEMS: "35"
         run: python -m ai_news_bot.main
