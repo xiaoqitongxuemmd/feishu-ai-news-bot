@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "feishu-ai-news-bot"
+version = "0.1.0"
+description = "Daily Feishu bot for AI and autonomous driving news briefs."
+requires-python = ">=3.10"
+dependencies = [
+    "feedparser>=6.0.11",
+    "python-dotenv>=1.0.1",
+    "tzdata>=2025.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
