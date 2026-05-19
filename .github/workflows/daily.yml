@@ -2,7 +2,7 @@ name: Daily AI News Brief
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "17 1 * * *"
   workflow_dispatch:
 
 jobs:
@@ -17,5 +17,16 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install -e .
-      - name: Schedule trigger test
-        run: echo "schedule trigger test"
+      - name: Send Feishu brief
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_MODEL: ${{ secrets.DEEPSEEK_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          NEWS_LOOKBACK_HOURS: "24"
+          MAX_NEWS_ITEMS: "35"
+        run: python -m ai_news_bot.main
