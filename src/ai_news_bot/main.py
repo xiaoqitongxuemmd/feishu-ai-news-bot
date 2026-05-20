@@ -29,6 +29,7 @@ def main() -> None:
         items,
         market_quotes,
     )
+    print(f"Generated brief length: {len(brief)} characters.")
     token = get_tenant_access_token(settings.feishu_app_id, settings.feishu_app_secret)
     today = shanghai_now().strftime("%Y-%m-%d")
     send_interactive_card(
