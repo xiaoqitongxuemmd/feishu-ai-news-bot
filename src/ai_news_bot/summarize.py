@@ -85,17 +85,49 @@ Market data:
 """.strip()
 
 
+def _brief_part_prompt(
+    title: str,
+    instructions: str,
+    news_items: list[NewsItem],
+    market_quotes: list[MarketQuote],
+    char_limit: int,
+) -> str:
+    return f"""
+You are a senior news editor and market analyst.
+Create one focused Chinese Feishu brief section: {title}.
+
+Hard constraints:
+- Use only information in the candidate news and market data.
+- All candidate news is already filtered to the last 24 hours. Do not introduce older news.
+- Market data uses the latest available trading day from the market data source, because stock markets may be closed during the last 24 hours.
+- If market data is empty and this section needs market data, explicitly say there is no usable recent trading-day market quote data.
+- Do not invent facts, prices, policy details, earnings, or company events.
+- Output Chinese markdown only.
+- Keep the final answer under {char_limit} Chinese characters.
+- Prefer concise bullets and avoid long introductions.
+
+Required focus:
+{instructions}
+
+Candidate news:
+{_news_payload(news_items)}
+
+Market data:
+{_market_payload(market_quotes)}
+""".strip()
+
+
 def _raise_http_error(provider: str, exc: urllib.error.HTTPError) -> None:
     body = exc.read().decode("utf-8", errors="replace")
     raise RuntimeError(f"{provider} API request failed: HTTP {exc.code}: {body}") from exc
 
 
-def _call_openai(api_key: str, model: str, prompt: str) -> str:
+def _call_openai(api_key: str, model: str, prompt: str, max_tokens: int = 4500) -> str:
     payload = {
         "model": model,
         "instructions": "Output only Chinese markdown suitable for a Feishu message card.",
         "input": prompt,
-        "max_output_tokens": 4500,
+        "max_output_tokens": max_tokens,
     }
     req = urllib.request.Request(
         OPENAI_RESPONSES_URL,
@@ -126,7 +158,7 @@ def _call_openai(api_key: str, model: str, prompt: str) -> str:
     raise RuntimeError(f"OpenAI response did not contain output text: {data}")
 
 
-def _call_deepseek(api_key: str, model: str, prompt: str) -> str:
+def _call_deepseek(api_key: str, model: str, prompt: str, max_tokens: int = 4500) -> str:
     payload = {
         "model": model,
         "messages": [
@@ -137,7 +169,7 @@ def _call_deepseek(api_key: str, model: str, prompt: str) -> str:
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.25,
-        "max_tokens": 4500,
+        "max_tokens": max_tokens,
         "stream": False,
     }
     req = urllib.request.Request(
@@ -176,4 +208,26 @@ def build_brief(
         return _call_deepseek(api_key, model, prompt)
     if provider == "openai":
         return _call_openai(api_key, model, prompt)
+    raise RuntimeError(f"Unsupported LLM provider: {provider}")
+
+
+def build_brief_part(
+    provider: str,
+    api_key: str,
+    model: str,
+    title: str,
+    instructions: str,
+    news_items: list[NewsItem],
+    market_quotes: list[MarketQuote],
+    char_limit: int = 2200,
+) -> str:
+    if not news_items and not market_quotes:
+        return "No usable news or market data was fetched for this section. Please check the sources or network."
+
+    prompt = _brief_part_prompt(title, instructions, news_items, market_quotes, char_limit)
+    max_tokens = max(1200, min(3200, char_limit + 600))
+    if provider == "deepseek":
+        return _call_deepseek(api_key, model, prompt, max_tokens=max_tokens)
+    if provider == "openai":
+        return _call_openai(api_key, model, prompt, max_tokens=max_tokens)
     raise RuntimeError(f"Unsupported LLM provider: {provider}")
