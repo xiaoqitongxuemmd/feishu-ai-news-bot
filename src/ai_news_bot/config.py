@@ -19,6 +19,7 @@ class Settings:
     llm_provider: str
     llm_api_key: str
     llm_model: str
+    llm_fallback_model: str | None
     news_lookback_hours: int
     max_news_items: int
 
@@ -35,9 +36,11 @@ def load_settings() -> Settings:
     if llm_provider == "deepseek":
         llm_api_key = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("LLM_API_KEY")
         llm_model = os.environ.get("DEEPSEEK_MODEL") or os.environ.get("LLM_MODEL") or "deepseek-chat"
+        llm_fallback_model = os.environ.get("DEEPSEEK_FALLBACK_MODEL") or os.environ.get("LLM_FALLBACK_MODEL")
     elif llm_provider == "openai":
         llm_api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY")
         llm_model = os.environ.get("OPENAI_MODEL") or os.environ.get("LLM_MODEL") or "gpt-4.1-mini"
+        llm_fallback_model = os.environ.get("OPENAI_FALLBACK_MODEL") or os.environ.get("LLM_FALLBACK_MODEL")
     else:
         raise RuntimeError(f"Unsupported LLM_PROVIDER: {llm_provider}")
     if not llm_api_key:
@@ -52,6 +55,7 @@ def load_settings() -> Settings:
         llm_provider=llm_provider,
         llm_api_key=llm_api_key,
         llm_model=llm_model,
+        llm_fallback_model=llm_fallback_model,
         news_lookback_hours=int(os.environ.get("NEWS_LOOKBACK_HOURS", "24")),
         max_news_items=int(os.environ.get("MAX_NEWS_ITEMS", "24")),
     )

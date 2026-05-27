@@ -25,8 +25,10 @@ jobs:
           LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           DEEPSEEK_MODEL: ${{ secrets.DEEPSEEK_MODEL }}
+          DEEPSEEK_FALLBACK_MODEL: ${{ secrets.DEEPSEEK_FALLBACK_MODEL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          OPENAI_FALLBACK_MODEL: ${{ secrets.OPENAI_FALLBACK_MODEL }}
           NEWS_LOOKBACK_HOURS: "24"
           MAX_NEWS_ITEMS: "35"
         run: python -m ai_news_bot.main

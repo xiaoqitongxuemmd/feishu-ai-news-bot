@@ -66,6 +66,7 @@ DeepSeek is the default recommended provider for this project.
 $env:LLM_PROVIDER = "deepseek"
 $env:DEEPSEEK_API_KEY = "your_deepseek_api_key"
 $env:DEEPSEEK_MODEL = "deepseek-chat"
+$env:DEEPSEEK_FALLBACK_MODEL = "deepseek-reasoner"
 ```
 
 The official DeepSeek API is OpenAI-compatible. This project uses:
@@ -86,6 +87,7 @@ python -m ai_news_bot.main
 $env:LLM_PROVIDER = "openai"
 $env:OPENAI_API_KEY = "your_openai_api_key"
 $env:OPENAI_MODEL = "gpt-4.1-mini"
+$env:OPENAI_FALLBACK_MODEL = "gpt-4.1"
 ```
 
 ## 6. GitHub Actions deployment
@@ -99,7 +101,10 @@ FEISHU_CHAT_ID
 LLM_PROVIDER
 DEEPSEEK_API_KEY
 DEEPSEEK_MODEL
+DEEPSEEK_FALLBACK_MODEL
 ```
+
+For OpenAI, use `OPENAI_API_KEY`, `OPENAI_MODEL`, and optionally `OPENAI_FALLBACK_MODEL`.
 
 `.github/workflows/daily.yml` runs at UTC 01:00, which is 09:00 in Asia/Shanghai.
 

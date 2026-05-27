@@ -193,22 +193,56 @@ def _call_deepseek(api_key: str, model: str, prompt: str, max_tokens: int = 4500
         raise RuntimeError(f"DeepSeek response did not contain output text: {data}") from exc
 
 
+def _call_model(provider: str, api_key: str, model: str, prompt: str, max_tokens: int) -> str:
+    if provider == "deepseek":
+        return _call_deepseek(api_key, model, prompt, max_tokens=max_tokens)
+    if provider == "openai":
+        return _call_openai(api_key, model, prompt, max_tokens=max_tokens)
+    raise RuntimeError(f"Unsupported LLM provider: {provider}")
+
+
+def _call_model_with_fallback(
+    provider: str,
+    api_key: str,
+    model: str,
+    fallback_model: str | None,
+    prompt: str,
+    max_tokens: int,
+) -> str:
+    models = [model]
+    if fallback_model and fallback_model != model:
+        models.append(fallback_model)
+
+    last_error: Exception | None = None
+    for index, candidate_model in enumerate(models):
+        try:
+            text = _call_model(provider, api_key, candidate_model, prompt, max_tokens=max_tokens).strip()
+            if text:
+                if index > 0:
+                    print(f"Used fallback LLM model: {candidate_model}")
+                return text
+            last_error = RuntimeError(f"{provider} model {candidate_model} returned empty output")
+        except Exception as exc:
+            last_error = exc
+            if index + 1 < len(models):
+                print(f"LLM model {candidate_model} failed, trying fallback model {models[index + 1]}: {exc}")
+
+    raise RuntimeError(f"All configured LLM models failed for provider {provider}") from last_error
+
+
 def build_brief(
     provider: str,
     api_key: str,
     model: str,
     news_items: list[NewsItem],
     market_quotes: list[MarketQuote],
+    fallback_model: str | None = None,
 ) -> str:
     if not news_items and not market_quotes:
         return "No usable news or market data was fetched today. Please check the sources or network."
 
     prompt = _brief_prompt(news_items, market_quotes)
-    if provider == "deepseek":
-        return _call_deepseek(api_key, model, prompt)
-    if provider == "openai":
-        return _call_openai(api_key, model, prompt)
-    raise RuntimeError(f"Unsupported LLM provider: {provider}")
+    return _call_model_with_fallback(provider, api_key, model, fallback_model, prompt, max_tokens=4500)
 
 
 def build_brief_part(
@@ -220,14 +254,11 @@ def build_brief_part(
     news_items: list[NewsItem],
     market_quotes: list[MarketQuote],
     char_limit: int = 2200,
+    fallback_model: str | None = None,
 ) -> str:
     if not news_items and not market_quotes:
         return "No usable news or market data was fetched for this section. Please check the sources or network."
 
     prompt = _brief_part_prompt(title, instructions, news_items, market_quotes, char_limit)
     max_tokens = max(1200, min(3200, char_limit + 600))
-    if provider == "deepseek":
-        return _call_deepseek(api_key, model, prompt, max_tokens=max_tokens)
-    if provider == "openai":
-        return _call_openai(api_key, model, prompt, max_tokens=max_tokens)
-    raise RuntimeError(f"Unsupported LLM provider: {provider}")
+    return _call_model_with_fallback(provider, api_key, model, fallback_model, prompt, max_tokens=max_tokens)

@@ -2,7 +2,9 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 import html
+import time
 import urllib.parse
+import urllib.request
 
 import feedparser
 
@@ -61,6 +63,9 @@ SECTION_ORDER = [
     "Global Autonomous Driving",
 ]
 
+FETCH_ATTEMPTS = 3
+FETCH_RETRY_DELAY_SECONDS = 5
+
 
 def _google_news_rss(feed_query: FeedQuery) -> str:
     if feed_query.query == "__TOP_STORIES__":
@@ -81,6 +86,28 @@ def _google_news_rss(feed_query: FeedQuery) -> str:
         }
     )
     return f"https://news.google.com/rss/search?{params}"
+
+
+def _fetch_feed(url: str):
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 feishu-ai-news-bot/0.1",
+            "Accept": "application/rss+xml, application/xml, text/xml",
+        },
+    )
+    last_error: Exception | None = None
+    for attempt in range(1, FETCH_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                feed = feedparser.parse(resp.read())
+            if feed.entries or attempt == FETCH_ATTEMPTS:
+                return feed
+        except Exception as exc:
+            last_error = exc
+        if attempt < FETCH_ATTEMPTS:
+            time.sleep(FETCH_RETRY_DELAY_SECONDS * attempt)
+    raise RuntimeError(f"Failed to fetch news feed after {FETCH_ATTEMPTS} attempts: {url}") from last_error
 
 
 def _parse_time(entry) -> datetime | None:
@@ -120,7 +147,11 @@ def fetch_news(lookback_hours: int, max_items: int) -> list[NewsItem]:
     by_section: dict[str, list[NewsItem]] = {section: [] for section in SECTION_ORDER}
 
     for feed_query in FEED_QUERIES:
-        feed = feedparser.parse(_google_news_rss(feed_query))
+        try:
+            feed = _fetch_feed(_google_news_rss(feed_query))
+        except Exception as exc:
+            print(f"Failed to fetch news feed for {feed_query.section}: {exc}")
+            continue
         for entry in feed.entries:
             link = entry.get("link", "")
             if not link or link in seen_links:

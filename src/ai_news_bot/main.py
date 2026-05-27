@@ -72,12 +72,31 @@ def _filter_items(items: list[NewsItem], sections: set[str]) -> list[NewsItem]:
     return [item for item in items if item.section in sections]
 
 
+def _model_status_markdown(provider: str, model: str, fallback_model: str | None) -> str:
+    fallback = fallback_model or "未配置"
+    return f"""
+**本次日报模型配置**
+
+- Provider: `{provider}`
+- 主模型: `{model}`
+- 备选模型: `{fallback}`
+
+说明：正文会优先使用主模型生成；如果主模型失败或返回空内容，会自动切换到备选模型。
+""".strip()
+
+
 def main() -> None:
     settings = load_settings()
     items = fetch_news(settings.news_lookback_hours, settings.max_news_items)
     market_quotes = fetch_market_quotes()
     token = get_tenant_access_token(settings.feishu_app_id, settings.feishu_app_secret)
     today = shanghai_now().strftime("%Y-%m-%d")
+    send_interactive_card(
+        token,
+        settings.feishu_chat_id,
+        f"Model Config | {today}",
+        _model_status_markdown(settings.llm_provider, settings.llm_model, settings.llm_fallback_model),
+    )
     for label, title, sections, include_markets, instructions, char_limit in BRIEF_PARTS:
         part_items = _filter_items(items, sections)
         part_quotes = market_quotes if include_markets else []
@@ -90,6 +109,7 @@ def main() -> None:
             part_items,
             part_quotes,
             char_limit=char_limit,
+            fallback_model=settings.llm_fallback_model,
         )
         print(f"Generated {label} brief length: {len(brief)} characters.")
         send_interactive_card(

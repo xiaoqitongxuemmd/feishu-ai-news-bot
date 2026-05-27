@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
+import time
 import urllib.parse
 import urllib.request
 
@@ -30,6 +31,9 @@ MARKET_SYMBOLS = [
     ("US", "Dow Jones Industrial Average", "^DJI"),
 ]
 
+FETCH_ATTEMPTS = 3
+FETCH_RETRY_DELAY_SECONDS = 5
+
 
 def _chart_url(symbol: str) -> str:
     encoded = urllib.parse.quote(symbol, safe="")
@@ -44,8 +48,16 @@ def _fetch_json(url: str) -> dict:
             "Accept": "application/json",
         },
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    last_error: Exception | None = None
+    for attempt in range(1, FETCH_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as exc:
+            last_error = exc
+            if attempt < FETCH_ATTEMPTS:
+                time.sleep(FETCH_RETRY_DELAY_SECONDS * attempt)
+    raise RuntimeError(f"Failed to fetch market data after {FETCH_ATTEMPTS} attempts: {url}") from last_error
 
 
 def _parse_quote(region: str, name: str, symbol: str, data: dict) -> MarketQuote | None:
@@ -62,7 +74,7 @@ def _parse_quote(region: str, name: str, symbol: str, data: dict) -> MarketQuote
     if len(points) < 2:
         return None
 
-    previous = float(points[0][1])
+    previous = float(points[-2][1])
     latest_ts, latest_value = points[-1]
     latest = float(latest_value)
     change = latest - previous
@@ -88,7 +100,8 @@ def fetch_market_quotes() -> list[MarketQuote]:
         try:
             data = _fetch_json(_chart_url(symbol))
             quote = _parse_quote(region, name, symbol, data)
-        except Exception:
+        except Exception as exc:
+            print(f"Failed to fetch market quote for {symbol}: {exc}")
             quote = None
         if quote:
             quotes.append(quote)
